@@ -2,6 +2,8 @@
 FROM python:3.11-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+
 RUN apt-get update && apt-get install -y \
     ffmpeg \
     git \
@@ -11,18 +13,19 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     make \
     g++ \
+    sqlite3 \
+    libsqlite3-dev \
     && rm -rf /var/lib/apt/lists/*
 
-RUN useradd -m -u 1000 user
-USER user
-ENV PATH="/home/user/.local/bin:$PATH"
+# إعادة بناء Python مع SQLite
+RUN pip install --no-cache-dir pysqlite3-binary
+
 WORKDIR /app
 
-COPY --chown=user requirements.txt requirements.txt
+COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir --upgrade -r requirements.txt
+    pip install --no-cache-dir -r requirements.txt
 
+COPY . .
 
-COPY --chown=user . /app
-
-CMD ["python3", "main.py"]
+CMD ["sh", "-c", "python3 -c 'import sqlite3; print(\"✓ SQLite OK\")' && python3 main.py"]
